@@ -1,316 +1,160 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Smartphone, Mail, ArrowRight } from 'react-feather'
 import { supabase, getCurrentProfile } from '../../lib/supabase'
-import { useAuthStore } from '../../store'
-import './Auth.css'
+import { useAuthStore } from '../../store/authStore'
 
-function Login() {
+export default function Login() {
   const navigate = useNavigate()
-  const { setUser, setProfile } = useAuthStore()
-
-  const [loginMethod, setLoginMethod] = useState('email') // 'email' or 'phone'
-  const [step, setStep] = useState('input') // 'input' or 'otp'
-
-  // Email states
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-
-  // Phone states
-  const [phone, setPhone] = useState('')
-  const [otp, setOtp] = useState('')
-
+  const setUser = useAuthStore((state) => state.setUser)
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // Email Login dengan Auto Signup
-  const handleEmailLogin = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
+    setLoading(true)
     setError('')
 
-    if (!email || !password) {
-      setError('Email dan password harus diisi')
-      return
-    }
-
-    if (password.length < 6) {
-      setError('Password minimal 6 karakter')
-      return
-    }
-
-    setLoading(true)
     try {
+      const { email, password } = formData
+
       // Coba login dulu
-      let { data, error: loginError } = await supabase.auth.signInWithPassword({
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password
       })
 
-      // Jika login gagal karena user tidak ada, coba signup
-      if (loginError) {
-        if (loginError.message.includes('Invalid login credentials')) {
-          // User belum terdaftar, auto signup
-          const { data: signupData, error: signupError } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-              emailRedirectTo: window.location.origin
-            }
-          })
+      // Jika login berhasil
+      if (signInData?.user && !signInError) {
+        setUser(signInData.user)
 
-          if (signupError) throw signupError
+        // Cek profile - apakah sudah lengkap?
+        const profile = await getCurrentProfile()
 
-          data = signupData
-
-          // Set user dan redirect ke register untuk lengkapi profil
-          setUser(data.user)
+        if (!profile) {
+          // Profile tidak ada (seharusnya sudah dibuat oleh trigger)
+          // Redirect ke register untuk isi data
           navigate('/register')
           return
+        }
+
+        // Cek apakah full_name masih default ('User' atau 'User Baru')
+        const isProfileIncomplete = 
+          !profile.full_name || 
+          profile.full_name === 'User' || 
+          profile.full_name === 'User Baru' ||
+          profile.full_name.trim() === ''
+
+        if (isProfileIncomplete) {
+          // Profile belum lengkap -> redirect ke register
+          navigate('/register')
+          return
+        }
+
+        // Profile sudah lengkap -> redirect sesuai role
+        if (profile.role === 'pemilik') {
+          navigate('/owner')
         } else {
-          // Error lain (bukan user not found)
-          throw loginError
+          navigate('/renter')
+        }
+        return
+      }
+
+      // Jika login gagal (user tidak ada), coba SIGNUP
+      if (signInError?.message?.includes('Invalid login credentials')) {
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/register`
+          }
+        })
+
+        if (signUpError) throw signUpError
+
+        if (signUpData?.user) {
+          setUser(signUpData.user)
+
+          // User baru -> selalu redirect ke register untuk isi data
+          navigate('/register')
+          return
         }
       }
 
-      // Login berhasil
-      setUser(data.user)
-      const profile = await getCurrentProfile()
+      // Error lainnya
+      throw signInError || new Error('Login/Signup gagal')
 
-      if (!profile) {
-        // User sudah ada di auth tapi belum ada profile
-        navigate('/register')
-      } else {
-        // User complete, langsung masuk
-        setProfile(profile)
-        navigate('/')
-      }
     } catch (err) {
       console.error('Login error:', err)
-      setError(err.message || 'Terjadi kesalahan, coba lagi')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Phone OTP
-  const handleSendOTP = async (e) => {
-    e.preventDefault()
-    setError('')
-
-    if (!phone || phone.length < 10) {
-      setError('Nomor telepon tidak valid')
-      return
-    }
-
-    setLoading(true)
-    try {
-      const formattedPhone = phone.startsWith('0') 
-        ? `+62${phone.slice(1)}` 
-        : phone.startsWith('+62') 
-        ? phone 
-        : `+62${phone}`
-
-      const { error } = await supabase.auth.signInWithOtp({ phone: formattedPhone })
-      if (error) throw error
-
-      setStep('otp')
-    } catch (err) {
-      setError(err.message || 'Gagal mengirim OTP')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleVerifyOTP = async (e) => {
-    e.preventDefault()
-    setError('')
-
-    if (!otp || otp.length !== 6) {
-      setError('Kode OTP harus 6 digit')
-      return
-    }
-
-    setLoading(true)
-    try {
-      const formattedPhone = phone.startsWith('0') 
-        ? `+62${phone.slice(1)}` 
-        : phone.startsWith('+62') 
-        ? phone 
-        : `+62${phone}`
-
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone: formattedPhone,
-        token: otp,
-        type: 'sms'
-      })
-
-      if (error) throw error
-
-      setUser(data.user)
-      const profile = await getCurrentProfile()
-
-      if (!profile) {
-        navigate('/register')
-      } else {
-        setProfile(profile)
-        navigate('/')
-      }
-    } catch (err) {
-      setError(err.message || 'Kode OTP salah')
+      setError(err.message || 'Terjadi kesalahan. Silakan coba lagi.')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="auth-page">
-      <div className="auth-container">
-        <div className="auth-header">
-          <div className="logo-large">K</div>
-          <h1>KostKoin</h1>
-          <p>Pas di Saku, Pas di Waktu</p>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">KostKoin</h1>
+          <p className="text-gray-600">Pas di Saku, Pas di Hati</p>
         </div>
 
-        {/* Method Selector */}
-        <div className="login-method-selector">
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Email
+            </label>
+            <input
+              type="email"
+              required
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              placeholder="email@example.com"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Password
+            </label>
+            <input
+              type="password"
+              required
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              placeholder="••••••••"
+              minLength={6}
+            />
+          </div>
+
           <button
-            className={`method-btn ${loginMethod === 'email' ? 'active' : ''}`}
-            onClick={() => {
-              setLoginMethod('email')
-              setStep('input')
-              setError('')
-            }}
+            type="submit"
+            disabled={loading}
+            className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
-            <Mail size={20} />
-            <span>Email</span>
+            {loading ? 'Memproses...' : 'Masuk / Daftar'}
           </button>
-          <button
-            className={`method-btn ${loginMethod === 'phone' ? 'active' : ''}`}
-            onClick={() => {
-              setLoginMethod('phone')
-              setStep('input')
-              setError('')
-            }}
-          >
-            <Smartphone size={20} />
-            <span>WhatsApp</span>
-          </button>
-        </div>
+        </form>
 
-        {/* Email Form */}
-        {loginMethod === 'email' && (
-          <form onSubmit={handleEmailLogin} className="auth-form">
-            <div className="form-group">
-              <label>
-                <Mail size={16} />
-                Email
-              </label>
-              <input
-                type="email"
-                placeholder="nama@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={loading}
-                autoComplete="email"
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Password</label>
-              <input
-                type="password"
-                placeholder="Minimal 6 karakter"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-                autoComplete="current-password"
-              />
-            </div>
-
-            {error && <div className="form-error">{error}</div>}
-
-            <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? 'Memproses...' : 'Masuk / Daftar'}
-              <ArrowRight size={20} />
-            </button>
-
-            <p className="form-footer">
-              Belum punya akun? Akan otomatis didaftarkan
-            </p>
-          </form>
-        )}
-
-        {/* Phone Form - Input */}
-        {loginMethod === 'phone' && step === 'input' && (
-          <form onSubmit={handleSendOTP} className="auth-form">
-            <div className="form-group">
-              <label>
-                <Smartphone size={16} />
-                Nomor WhatsApp
-              </label>
-              <input
-                type="tel"
-                placeholder="081234567890"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-
-            {error && <div className="form-error">{error}</div>}
-
-            <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? 'Mengirim...' : 'Kirim Kode OTP'}
-              <ArrowRight size={20} />
-            </button>
-
-            <p className="form-footer">
-              Kode OTP akan dikirim via SMS/WhatsApp
-            </p>
-          </form>
-        )}
-
-        {/* Phone Form - OTP */}
-        {loginMethod === 'phone' && step === 'otp' && (
-          <form onSubmit={handleVerifyOTP} className="auth-form">
-            <div className="form-group">
-              <label>Kode OTP</label>
-              <input
-                type="text"
-                className="otp-input"
-                placeholder="123456"
-                maxLength={6}
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
-                disabled={loading}
-                autoFocus
-              />
-              <p className="form-hint">Kode dikirim ke {phone}</p>
-            </div>
-
-            {error && <div className="form-error">{error}</div>}
-
-            <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? 'Memverifikasi...' : 'Verifikasi & Masuk'}
-            </button>
-
-            <button 
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => {
-                setStep('input')
-                setOtp('')
-                setError('')
-              }}
-              disabled={loading}
-            >
-              Ubah Nomor
-            </button>
-          </form>
-        )}
+        {/* Info */}
+        <p className="text-center text-sm text-gray-600 mt-6">
+          Belum punya akun? Langsung masuk aja, sistem akan otomatis buatkan akun baru! 🚀
+        </p>
       </div>
     </div>
   )
 }
-
-export default Login
