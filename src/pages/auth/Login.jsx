@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase, getCurrentProfile } from '../../lib/supabase'
-import { useAuthStore } from '../../store/authStore'
 
 export default function Login() {
   const navigate = useNavigate()
-  const setUser = useAuthStore((state) => state.setUser)
+  
   const [formData, setFormData] = useState({
     email: '',
     password: ''
