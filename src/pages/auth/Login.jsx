@@ -152,7 +152,7 @@ export default function Login() {
 
         {/* Info */}
         <p className="text-center text-sm text-gray-600 mt-6">
-          Belum punya akun? Langsung masuk aja, sistem akan otomatis buatkan akun baru! 🚀
+          Belum punya akun? Langsung masuk aja, sistem akan otomatis buatkan akun baru!
         </p>
       </div>
     </div>
