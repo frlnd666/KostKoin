@@ -6,13 +6,13 @@ export const useAuthStore = create(
     (set) => ({
       user: null,
       profile: null,
-
+      
       setUser: (user) => set({ user }),
-
+      
       setProfile: (profile) => set({ profile }),
-
+      
       logout: () => set({ user: null, profile: null }),
-
+      
       updateProfile: (updates) => set((state) => ({
         profile: state.profile ? { ...state.profile, ...updates } : null
       }))
