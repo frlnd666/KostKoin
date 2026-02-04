@@ -1,19 +1,64 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Smartphone, ArrowRight } from 'react-feather'
-import { signInWithOTP, verifyOTP, getCurrentProfile } from '../../lib/supabase'
+import { Smartphone, Mail, ArrowRight } from 'react-feather'
+import { supabase, getCurrentProfile } from '../../lib/supabase'
 import { useAuthStore } from '../../store'
 import './Auth.css'
 
 function Login() {
   const navigate = useNavigate()
   const { setUser, setProfile } = useAuthStore()
-  const [step, setStep] = useState('phone')
+
+  const [loginMethod, setLoginMethod] = useState('email') // 'email' or 'phone'
+  const [step, setStep] = useState('input') // 'input' or 'otp'
+
+  // Email states
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+
+  // Phone states
   const [phone, setPhone] = useState('')
   const [otp, setOtp] = useState('')
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  // Email Login
+  const handleEmailLogin = async (e) => {
+    e.preventDefault()
+    setError('')
+
+    if (!email || !password) {
+      setError('Email dan password harus diisi')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
+
+      if (error) throw error
+
+      setUser(data.user)
+      const profile = await getCurrentProfile()
+
+      if (!profile) {
+        navigate('/register')
+      } else {
+        setProfile(profile)
+        navigate('/')
+      }
+    } catch (err) {
+      setError(err.message || 'Email atau password salah')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Phone OTP
   const handleSendOTP = async (e) => {
     e.preventDefault()
     setError('')
@@ -31,10 +76,12 @@ function Login() {
         ? phone 
         : `+62${phone}`
 
-      await signInWithOTP(formattedPhone)
+      const { error } = await supabase.auth.signInWithOtp({ phone: formattedPhone })
+      if (error) throw error
+
       setStep('otp')
     } catch (err) {
-      setError(err.message || 'Gagal mengirim kode OTP')
+      setError(err.message || 'Gagal mengirim OTP')
     } finally {
       setLoading(false)
     }
@@ -57,9 +104,15 @@ function Login() {
         ? phone 
         : `+62${phone}`
 
-      const { session } = await verifyOTP(formattedPhone, otp)
-      setUser(session.user)
+      const { data, error } = await supabase.auth.verifyOtp({
+        phone: formattedPhone,
+        token: otp,
+        type: 'sms'
+      })
 
+      if (error) throw error
+
+      setUser(data.user)
       const profile = await getCurrentProfile()
 
       if (!profile) {
@@ -84,7 +137,75 @@ function Login() {
           <p>Pas di Saku, Pas di Waktu</p>
         </div>
 
-        {step === 'phone' ? (
+        {/* Method Selector */}
+        <div className="login-method-selector">
+          <button
+            className={`method-btn ${loginMethod === 'email' ? 'active' : ''}`}
+            onClick={() => {
+              setLoginMethod('email')
+              setStep('input')
+              setError('')
+            }}
+          >
+            <Mail size={20} />
+            <span>Email</span>
+          </button>
+          <button
+            className={`method-btn ${loginMethod === 'phone' ? 'active' : ''}`}
+            onClick={() => {
+              setLoginMethod('phone')
+              setStep('input')
+              setError('')
+            }}
+          >
+            <Smartphone size={20} />
+            <span>WhatsApp</span>
+          </button>
+        </div>
+
+        {/* Email Form */}
+        {loginMethod === 'email' && (
+          <form onSubmit={handleEmailLogin} className="auth-form">
+            <div className="form-group">
+              <label>
+                <Mail size={16} />
+                Email
+              </label>
+              <input
+                type="email"
+                placeholder="nama@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Password</label>
+              <input
+                type="password"
+                placeholder="Masukkan password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+
+            {error && <div className="form-error">{error}</div>}
+
+            <button type="submit" className="btn btn-primary" disabled={loading}>
+              {loading ? 'Memproses...' : 'Masuk'}
+              <ArrowRight size={20} />
+            </button>
+
+            <p className="form-footer">
+              Belum punya akun? Daftar saat pertama login
+            </p>
+          </form>
+        )}
+
+        {/* Phone Form - Input */}
+        {loginMethod === 'phone' && step === 'input' && (
           <form onSubmit={handleSendOTP} className="auth-form">
             <div className="form-group">
               <label>
@@ -107,7 +228,10 @@ function Login() {
               <ArrowRight size={20} />
             </button>
           </form>
-        ) : (
+        )}
+
+        {/* Phone Form - OTP */}
+        {loginMethod === 'phone' && step === 'otp' && (
           <form onSubmit={handleVerifyOTP} className="auth-form">
             <div className="form-group">
               <label>Kode OTP</label>
@@ -132,7 +256,7 @@ function Login() {
             <button 
               type="button"
               className="btn btn-secondary"
-              onClick={() => setStep('phone')}
+              onClick={() => setStep('input')}
               disabled={loading}
             >
               Ubah Nomor

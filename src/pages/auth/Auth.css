@@ -35,7 +35,6 @@
 .auth-header h1 {
   margin-bottom: 0.5rem;
   font-size: 2rem;
-  color: white;
 }
 
 .auth-header p {
@@ -43,6 +42,44 @@
   color: rgba(255, 255, 255, 0.9);
 }
 
+/* Login Method Selector */
+.login-method-selector {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+}
+
+.method-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  background: transparent;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.method-btn:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.method-btn.active {
+  color: var(--primary);
+  background: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Forms */
 .auth-form {
   padding: 2rem;
   background: white;
@@ -64,7 +101,9 @@
 }
 
 .form-group input[type="text"],
-.form-group input[type="tel"] {
+.form-group input[type="tel"],
+.form-group input[type="email"],
+.form-group input[type="password"] {
   width: 100%;
   padding: 0.75rem 1rem;
   border: 1px solid var(--gray-300);
@@ -87,6 +126,13 @@
   margin-top: 0.5rem;
   font-size: 0.75rem;
   color: var(--gray-500);
+}
+
+.form-footer {
+  margin-top: 1rem;
+  font-size: 0.75rem;
+  text-align: center;
+  color: var(--gray-600);
 }
 
 .form-error {
