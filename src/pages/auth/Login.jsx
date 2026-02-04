@@ -23,7 +23,7 @@ function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // Email Login
+  // Email Login dengan Auto Signup
   const handleEmailLogin = async (e) => {
     e.preventDefault()
     setError('')
@@ -33,26 +33,60 @@ function Login() {
       return
     }
 
+    if (password.length < 6) {
+      setError('Password minimal 6 karakter')
+      return
+    }
+
     setLoading(true)
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      // Coba login dulu
+      let { data, error: loginError } = await supabase.auth.signInWithPassword({
         email,
         password
       })
 
-      if (error) throw error
+      // Jika login gagal karena user tidak ada, coba signup
+      if (loginError) {
+        if (loginError.message.includes('Invalid login credentials')) {
+          // User belum terdaftar, auto signup
+          const { data: signupData, error: signupError } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              emailRedirectTo: window.location.origin
+            }
+          })
 
+          if (signupError) throw signupError
+
+          data = signupData
+
+          // Set user dan redirect ke register untuk lengkapi profil
+          setUser(data.user)
+          navigate('/register')
+          return
+        } else {
+          // Error lain (bukan user not found)
+          throw loginError
+        }
+      }
+
+      // Login berhasil
       setUser(data.user)
       const profile = await getCurrentProfile()
 
       if (!profile) {
+        // User sudah ada di auth tapi belum ada profile
         navigate('/register')
       } else {
+        // User complete, langsung masuk
         setProfile(profile)
         navigate('/')
       }
     } catch (err) {
-      setError(err.message || 'Email atau password salah')
+      console.error('Login error:', err)
+      setError(err.message || 'Terjadi kesalahan, coba lagi')
     } finally {
       setLoading(false)
     }
@@ -177,6 +211,7 @@ function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
+                autoComplete="email"
               />
             </div>
 
@@ -184,22 +219,23 @@ function Login() {
               <label>Password</label>
               <input
                 type="password"
-                placeholder="Masukkan password"
+                placeholder="Minimal 6 karakter"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
+                autoComplete="current-password"
               />
             </div>
 
             {error && <div className="form-error">{error}</div>}
 
             <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? 'Memproses...' : 'Masuk'}
+              {loading ? 'Memproses...' : 'Masuk / Daftar'}
               <ArrowRight size={20} />
             </button>
 
             <p className="form-footer">
-              Belum punya akun? Daftar saat pertama login
+              Belum punya akun? Akan otomatis didaftarkan
             </p>
           </form>
         )}
@@ -227,6 +263,10 @@ function Login() {
               {loading ? 'Mengirim...' : 'Kirim Kode OTP'}
               <ArrowRight size={20} />
             </button>
+
+            <p className="form-footer">
+              Kode OTP akan dikirim via SMS/WhatsApp
+            </p>
           </form>
         )}
 
@@ -243,6 +283,7 @@ function Login() {
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
                 disabled={loading}
+                autoFocus
               />
               <p className="form-hint">Kode dikirim ke {phone}</p>
             </div>
@@ -256,7 +297,11 @@ function Login() {
             <button 
               type="button"
               className="btn btn-secondary"
-              onClick={() => setStep('input')}
+              onClick={() => {
+                setStep('input')
+                setOtp('')
+                setError('')
+              }}
               disabled={loading}
             >
               Ubah Nomor
