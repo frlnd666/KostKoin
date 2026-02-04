@@ -1,0 +1,98 @@
+.kosts-page {
+  min-height: 100vh;
+  background: var(--gray-50);
+}
+
+.kosts-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: white;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.kosts-header h1 {
+  font-size: 1.25rem;
+}
+
+.btn-add {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: white;
+  background: var(--primary);
+  border-radius: 8px;
+}
+
+.kosts-content {
+  padding: 1.5rem;
+}
+
+.kosts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.kost-item {
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.kost-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.kost-name {
+  margin-bottom: 0.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.kost-address {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+}
+
+.toggle-btn {
+  color: var(--gray-400);
+  transition: color 0.2s;
+}
+
+.toggle-btn.active {
+  color: var(--success);
+}
+
+.kost-item-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--gray-200);
+}
+
+.kost-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+  margin-bottom: 0.25rem;
+}
+
+.stat-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--gray-900);
+}
