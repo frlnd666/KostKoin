@@ -1,4 +1,4 @@
-# KostKoin - Kost Per Jam di Banten
+# KostKoin v3 - Kost Per Jam di Banten
 
 ## Quick Start
 
