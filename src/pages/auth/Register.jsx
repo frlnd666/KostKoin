@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { User, Users, Phone, ArrowRight } from 'react-feather'
 import { createProfile, getCurrentUser } from '../../lib/supabase'
 import { useAuthStore } from '../../store'
-
 export default function Register() {
   const navigate = useNavigate()
   const { setProfile } = useAuthStore()
