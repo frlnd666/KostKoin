@@ -47,7 +47,7 @@ export default function RenterLayout() {
           onClick={() => navigate('/renter')}
         />
         <NavItem
-          icon={<ClipboardList size={20} />}
+          icon={<List size={20} />}
           label="Pesanan"
           active={currentPath.startsWith('/renter/orders')}
           onClick={() => navigate('/renter/orders')}
