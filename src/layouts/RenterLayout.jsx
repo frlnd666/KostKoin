@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Home, User, ClipboardList } from 'react-feather'
+import { Home, User, List } from 'react-feather'
 import { useAuthStore } from '../store'
 import { signOut } from '../lib/supabase'
 
