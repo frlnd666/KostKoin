@@ -4,15 +4,11 @@ on:
   push:
     branches: [main]
     paths:
-      - 'functions/**'
+      - 'functions/**'   # hanya jalan jika ada perubahan di functions/
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-
     steps:
       - uses: actions/checkout@v3
 
@@ -20,12 +16,8 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies
+      - name: Install functions dependencies
         run: cd functions && npm install
 
-      - name: Deploy Functions
-        uses: w9jds/firebase-action@master
-        with:
-          args: deploy --only functions
-        env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+      - name: Deploy to Firebase
+        run: cd functions && npx firebase-tools deploy --only functions --token ${{ secrets.FIREBASE_TOKEN }}
