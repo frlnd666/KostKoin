@@ -1,23 +1,6 @@
-name: Deploy Firebase Functions
-
-on:
-  push:
-    branches: [main]
-    paths:
-      - 'functions/**'   # hanya jalan jika ada perubahan di functions/
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-
-      - name: Install functions dependencies
-        run: cd functions && npm install
-
-      - name: Deploy to Firebase
-        run: cd functions && npx firebase-tools deploy --only functions --token ${{ secrets.FIREBASE_TOKEN }}
+- name: Deploy
+  uses: w9jds/firebase-action@master
+  with:
+    args: deploy --only functions
+  env:
+    GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
