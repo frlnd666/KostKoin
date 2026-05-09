@@ -1,31 +1,5 @@
-name: Deploy Firebase Functions
-
-on:
-  workflow_dispatch:        # ← trigger manual dari GitHub UI
-  push:
-    branches:
-      - main
-    paths:
-      - 'functions/**'
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Setup Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        run: cd functions && npm install
-
       - name: Deploy
-        uses: w9jds/firebase-action@master
-        with:
-          args: deploy --only functions
-        env:
-          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/sa.json
+          export GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json
+          npx firebase-tools@latest deploy --only functions --project $(cat /tmp/sa.json | python3 -c "import sys,json; print(json.load(sys.stdin)['project_id'])")
