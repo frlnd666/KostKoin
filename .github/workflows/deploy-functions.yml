@@ -1,6 +1,7 @@
 name: Deploy Firebase Functions
 
 on:
+  workflow_dispatch:        # ← trigger manual dari GitHub UI
   push:
     branches:
       - main
